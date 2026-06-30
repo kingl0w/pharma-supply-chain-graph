@@ -1,0 +1,15 @@
+# generated data (keep the dirs via .gitkeep)
+data/landing/*
+data/out/*
+!data/landing/.gitkeep
+!data/out/.gitkeep
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+.claude/

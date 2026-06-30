@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "source": "openFDA drug label",
+    "license": "https://open.fda.gov/license/",
+    "last_updated": "2026-04-07",
+    "skip": 0,
+    "trimmed": true
+  },
+  "results": [
+    {
+      "effective_time": "20210902",
+      "id": "ca7bbcc8-2354-375c-e053-2995a90a72a0",
+      "set_id": "0000025c-6dbf-4af7-a741-5cbacaed519a",
+      "openfda": {
+        "brand_name": ["SILICEA"],
+        "generic_name": ["SILICEA"],
+        "manufacturer_name": ["Rxhomeo Private Limited d.b.a. Rxhomeo, Inc"],
+        "product_ndc": ["15631-0404"],
+        "product_type": ["HUMAN OTC DRUG"],
+        "route": ["ORAL"],
+        "substance_name": ["SILICON DIOXIDE"],
+        "spl_id": ["ca7bbcc8-2354-375c-e053-2995a90a72a0"],
+        "is_original_packager": [true],
+        "unii": ["ETJ7Z6XBU4"]
+      }
+    }
+  ]
+}

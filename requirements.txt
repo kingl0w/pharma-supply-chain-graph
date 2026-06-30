@@ -1,0 +1,5 @@
+# The core pipeline (fetch, parse, resolve, emit, query) uses ONLY the Python
+# standard library. No install needed to run it.
+#
+# Dev/test only:
+pytest>=8.0
