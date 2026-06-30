@@ -1,4 +1,4 @@
-"""Sample analytics over the built graph, to prove it answers real questions."""
+"""sample analytics over the built graph."""
 import csv
 import os
 from collections import Counter, defaultdict

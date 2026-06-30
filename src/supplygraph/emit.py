@@ -1,7 +1,4 @@
-"""Emit the neutral output: nodes.csv + edges.csv (loads to Neo4j and anything
-tabular) and graph.jsonld (RDF-ready, schema.org-aligned, provenance per edge).
-One pipeline, multiple consumers, no reprocessing.
-"""
+"""build neutral output: nodes.csv, edges.csv, graph.jsonld."""
 import csv
 import glob
 import json
@@ -54,7 +51,7 @@ def write_jsonld(nodes, edges, outdir=OUT_DIR):
         if st:
             obj["stableId"] = st
         graph.append(obj)
-    # edges as reified assertions so provenance is first-class (RAG-friendly)
+    # edges as reified assertions so provenance is first-class
     for (s, rel, o, src, conf, asof, rec) in edges:
         graph.append({
             "@id": f"_:stmt-{s}-{rel}-{o}",

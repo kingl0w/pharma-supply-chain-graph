@@ -1,9 +1,6 @@
-"""openFDA connector. `fetch` pulls raw label pages into the landing zone.
+"""openfda connector: fetch raw label pages into the landing zone.
 
-Run this on a host that can reach api.fda.gov. Each page is written immutably.
-By default we trim each record to the structured fields we use (openfda block +
-ids + effective_time), dropping multi-kilobyte label prose (warnings, dosage).
-Pass trim=False to keep the full raw record for strict re-derivation.
+needs network (api.fda.gov). trim keeps only the structured fields; trim=False keeps full records.
 """
 import datetime
 import json

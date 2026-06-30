@@ -1,4 +1,4 @@
-"""Command-line entrypoint:  python -m supplygraph.cli {fetch,build,query}"""
+"""cli entrypoint: python -m supplygraph.cli {fetch,build,query}."""
 import argparse
 
 from . import config, emit, openfda
@@ -17,6 +17,7 @@ def main():
 
     sub.add_parser("build", help="parse landing zone -> nodes/edges/jsonld")
     sub.add_parser("query", help="run sample analytics on the built graph")
+    sub.add_parser("rdf", help="load graph.jsonld into rdf, validate (shacl), run sparql analytics")
 
     args = ap.parse_args()
     if args.cmd == "fetch":
@@ -26,6 +27,9 @@ def main():
     elif args.cmd == "query":
         from . import query
         query.run()
+    elif args.cmd == "rdf":
+        from . import rdf
+        raise SystemExit(0 if rdf.run() else 1)
 
 
 if __name__ == "__main__":

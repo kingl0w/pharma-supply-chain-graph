@@ -31,13 +31,18 @@ make build
 # sanity-check
 make query
 
+# load into RDF, SHACL-validate, run SPARQL analytics (no server)
+pip install -e ".[rdf]"
+make rdf
+
 # tests (no network needed)
 pip install -e ".[dev]"
 make test
 ```
 
 The core pipeline uses only the Python standard library. `pytest` is the only
-dev dependency.
+dev dependency. The RDF consumer (`make rdf`) adds `rdflib` + `pyshacl`, scoped to
+the optional `rdf` extra so the core install stays dependency-free.
 
 ## Output
 
@@ -49,7 +54,8 @@ dev dependency.
 ## Structure
 
 ```
-src/supplygraph/  pipeline package (connector, parse, resolve, emit, query, cli)
+src/supplygraph/  pipeline package (connector, parse, resolve, emit, query, cli, rdf)
+shapes/           SHACL shapes for the RDF consumer
 docs/             SCHEMA.md (ontology) and DATA_SOURCING.md (sourcing architecture)
 data/landing/     raw immutable source pages (gitignored)
 data/out/         generated neutral output (gitignored)
@@ -59,10 +65,11 @@ pyproject.toml    project metadata, console script, and pytest config
 
 ## Status and roadmap
 
-Data layer is complete: connector, parse, entity-resolution stub, neutral output,
-CLI, tests. Next: resolve top makers to LEI / Wikidata ids, then load into Fuseki
-(SPARQL) and Neo4j (Cypher), then a RAG endpoint that answers questions and cites
-the source record behind every fact.
+Data layer is complete: connector, parse, entity resolution with a stable-id hook,
+neutral output, CLI, tests. Consumer 1 (RDF) is in: `make rdf` loads the JSON-LD into
+rdflib, validates it against the `shapes/` SHACL contract, and runs SPARQL analytics
+locally (no server). Next: Neo4j (Cypher) for a portability proof, then a RAG endpoint
+that answers questions and cites the source record behind every fact.
 
 ## Data source and license
 

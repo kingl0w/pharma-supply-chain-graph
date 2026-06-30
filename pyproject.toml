@@ -13,6 +13,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+rdf = ["rdflib>=7", "pyshacl>=0.26"]   # rdf consumer layer only; core stays stdlib
 
 [project.scripts]
 supplygraph = "supplygraph.cli:main"
@@ -25,3 +26,7 @@ where = ["src"]
 # so tests import the package without an install.
 addopts = "-p no:pytest_ethereum"
 pythonpath = ["src"]
+filterwarnings = [
+    "ignore::DeprecationWarning:rdflib.*",
+    "ignore::DeprecationWarning:pyshacl.*",
+]

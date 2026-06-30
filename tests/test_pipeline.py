@@ -1,4 +1,4 @@
-"""Tests for the parse and resolve stages, against a real openFDA record."""
+"""tests for the parse and resolve stages."""
 import json
 import os
 
@@ -24,15 +24,14 @@ def _sample():
 def test_resolve_company_strips_suffixes_and_dba():
     cid, name, stable = resolve_company("Rxhomeo Private Limited d.b.a. Rxhomeo, Inc")
     assert cid == "co:rxhomeo"
-    assert stable == ""            # no authoritative id yet
+    assert stable == ""
 
 
-# raw labeler strings exactly as they appear in the pull -> (expected id, clean name).
-# Fed verbatim to resolve_company, the same entry point parse.py uses.
+# raw labeler strings from the pull -> (expected id, clean name)
 COMPANY_IDS = [
-    ("Conopco d/b/a/ Unilever", "co:conopco", "Conopco"),             # slash d/b/a; keep entity before alias
-    ("NuCare Pharmaceuticals,Inc.", "co:nucare-pharmaceuticals", "NuCare Pharmaceuticals"),  # real raw form: comma, no space
-    ("NuCare PharmaceuticalsInc", "co:nucare-pharmaceuticals", "NuCare Pharmaceuticals"),    # already-fused variant
+    ("Conopco d/b/a/ Unilever", "co:conopco", "Conopco"),             # slash d/b/a
+    ("NuCare Pharmaceuticals,Inc.", "co:nucare-pharmaceuticals", "NuCare Pharmaceuticals"),  # comma, no space
+    ("NuCare PharmaceuticalsInc", "co:nucare-pharmaceuticals", "NuCare Pharmaceuticals"),    # already fused
     ("Bryant Ranch Prepack", "co:bryant-ranch-prepack", "Bryant Ranch Prepack"),
     ("A-S Medication Solutions", "co:a-s-medication-solutions", "A-S Medication Solutions"),
     ("Rxhomeo Private Limited d.b.a. Rxhomeo, Inc", "co:rxhomeo", "Rxhomeo"),
@@ -64,7 +63,7 @@ def test_load_ids_ignores_doc_and_nonstring(tmp_path):
 
 
 def test_seed_file_is_valid():
-    ids = _load_ids()  # the shipped data/company_ids.json
+    ids = _load_ids()  # shipped data/company_ids.json
     assert ids and all(k.startswith("co:") and isinstance(v, str) for k, v in ids.items())
 
 
@@ -82,6 +81,5 @@ def test_claims_from_real_record():
     rels = {(s, r, o) for (s, r, o, *_rest) in edges}
     assert ("co:rxhomeo", "MAKES", "ndc:15631-0404") in rels
     assert ("ndc:15631-0404", "CONTAINS", "unii:ETJ7Z6XBU4") in rels
-    # provenance present on every edge
     for e in edges:
         assert e[3] and e[5] is not None and e[6]  # source, as_of, source_record

@@ -1,8 +1,4 @@
-"""Parse a raw openFDA record into nodes and provenanced edges.
-
-Model:  Company --MAKES--> Product --CONTAINS--> Part
-Each edge carries: source, confidence, as_of, source_record (the SPL id).
-"""
+"""raw openfda record -> nodes + provenanced edges."""
 from .config import SOURCE_NAME
 from .resolve import resolve_company, resolve_ingredient
 
@@ -13,7 +9,6 @@ def _first(d, k):
 
 
 def claims_from(rec):
-    """Return (nodes_dict, edges_list). Empty if the record lacks key fields."""
     o = rec.get("openfda") or {}
     ndc = _first(o, "product_ndc")
     maker = _first(o, "manufacturer_name")
@@ -29,8 +24,7 @@ def claims_from(rec):
     prod = f"ndc:{ndc}"
     nodes = {cid: ("Company", cname, cstable), prod: ("Product", name, "")}
 
-    # labeler may relabel rather than manufacture; confidence reflects that
-    make_conf = 0.9 if is_orig else 0.7
+    make_conf = 0.9 if is_orig else 0.7   # lower when not the original packager
     edges = [(cid, "MAKES", prod, SOURCE_NAME, make_conf, as_of, spl)]
 
     subs = o.get("substance_name") or []

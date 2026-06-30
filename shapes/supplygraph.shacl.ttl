@@ -1,0 +1,35 @@
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix sg:     <https://w3id.org/supplygraph/schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+# derived from docs/SCHEMA.md. note: confidence loads from json-ld as xsd:double,
+# and country (schema.md 9) is not emitted yet, so it is not required here.
+
+# --- classes (schema.md 3, 5): every node carries a display name ---
+sg:CompanyShape a sh:NodeShape ;
+    sh:targetClass schema:Organization ;
+    sh:property [ sh:path schema:name ; sh:minCount 1 ; sh:datatype xsd:string ] .
+
+sg:ProductShape a sh:NodeShape ;
+    sh:targetClass schema:Product ;
+    sh:property [ sh:path schema:name ; sh:minCount 1 ; sh:datatype xsd:string ] .
+
+sg:PartShape a sh:NodeShape ;
+    sh:targetClass sg:Part ;
+    sh:property [ sh:path schema:name ; sh:minCount 1 ; sh:datatype xsd:string ] .
+
+# --- edges + provenance contract (schema.md 4, 6) ---
+# every assertion is a MAKES or CONTAINS edge carrying source, confidence in [0,1],
+# as_of and source_record.
+sg:AssertionShape a sh:NodeShape ;
+    sh:targetClass sg:Assertion ;
+    sh:property [ sh:path sg:subject      ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path sg:object       ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path sg:predicate    ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:in ( "MAKES" "CONTAINS" ) ] ;
+    sh:property [ sh:path sg:source       ; sh:minCount 1 ; sh:datatype xsd:string ; sh:minLength 1 ] ;
+    sh:property [ sh:path sg:confidence   ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:datatype xsd:double ; sh:minInclusive 0.0 ; sh:maxInclusive 1.0 ] ;
+    sh:property [ sh:path sg:asOf         ; sh:minCount 1 ; sh:minLength 1 ] ;
+    sh:property [ sh:path sg:sourceRecord ; sh:minCount 1 ; sh:minLength 1 ] .
