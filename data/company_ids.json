@@ -1,0 +1,6 @@
+{
+  "_README": "Authoritative company ids, keyed by the resolved `co:<slug>` id that resolve_company() produces. Get a key with: PYTHONPATH=src python -c \"from supplygraph.resolve import resolve_company; print(resolve_company('SOME LABELER NAME')[0])\". Value = an LEI (20 chars, look up at gleif.org) or a Wikidata QID (Q-number, wikidata.org). The entries below are seed examples - VERIFY each id at its source before relying on it. To add a labeler: resolve its name to the co: key, look up the id, add one line. Keys beginning with '_' are ignored by the loader.",
+  "co:pfizer": "765980TFWHQUEX7C5293",
+  "co:johnson-johnson": "Q333718",
+  "co:conopco": "Q190701"
+}

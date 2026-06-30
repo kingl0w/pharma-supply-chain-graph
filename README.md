@@ -32,7 +32,7 @@ make build
 make query
 
 # tests (no network needed)
-pip install -r requirements.txt
+pip install -e ".[dev]"
 make test
 ```
 
@@ -49,11 +49,12 @@ dev dependency.
 ## Structure
 
 ```
-supplygraph/      pipeline package (connector, parse, resolve, emit, query, cli)
+src/supplygraph/  pipeline package (connector, parse, resolve, emit, query, cli)
 docs/             SCHEMA.md (ontology) and DATA_SOURCING.md (sourcing architecture)
 data/landing/     raw immutable source pages (gitignored)
 data/out/         generated neutral output (gitignored)
 tests/            unit tests over a real sample record
+pyproject.toml    project metadata, console script, and pytest config
 ```
 
 ## Status and roadmap

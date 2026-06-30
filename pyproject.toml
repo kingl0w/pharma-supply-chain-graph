@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "supplygraph"
+version = "0.1.0"
+description = "openFDA drug labels -> provenanced, store-neutral knowledge graph"
+readme = "README.md"
+requires-python = ">=3.10"
+# The core pipeline (fetch, parse, resolve, emit, query) is standard-library only.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+supplygraph = "supplygraph.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+# Disable the broken global web3 'pytest_ethereum' plugin; put src/ on the path
+# so tests import the package without an install.
+addopts = "-p no:pytest_ethereum"
+pythonpath = ["src"]

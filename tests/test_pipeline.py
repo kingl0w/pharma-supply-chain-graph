@@ -2,8 +2,16 @@
 import json
 import os
 
+import pytest
+
+from supplygraph import resolve
 from supplygraph.parse import claims_from
-from supplygraph.resolve import resolve_company, resolve_ingredient
+from supplygraph.resolve import (
+    _load_ids,
+    resolve_company,
+    resolve_ingredient,
+    stable_id_for,
+)
 
 HERE = os.path.dirname(__file__)
 
@@ -17,6 +25,47 @@ def test_resolve_company_strips_suffixes_and_dba():
     cid, name, stable = resolve_company("Rxhomeo Private Limited d.b.a. Rxhomeo, Inc")
     assert cid == "co:rxhomeo"
     assert stable == ""            # no authoritative id yet
+
+
+# raw labeler strings exactly as they appear in the pull -> (expected id, clean name).
+# Fed verbatim to resolve_company, the same entry point parse.py uses.
+COMPANY_IDS = [
+    ("Conopco d/b/a/ Unilever", "co:conopco", "Conopco"),             # slash d/b/a; keep entity before alias
+    ("NuCare Pharmaceuticals,Inc.", "co:nucare-pharmaceuticals", "NuCare Pharmaceuticals"),  # real raw form: comma, no space
+    ("NuCare PharmaceuticalsInc", "co:nucare-pharmaceuticals", "NuCare Pharmaceuticals"),    # already-fused variant
+    ("Bryant Ranch Prepack", "co:bryant-ranch-prepack", "Bryant Ranch Prepack"),
+    ("A-S Medication Solutions", "co:a-s-medication-solutions", "A-S Medication Solutions"),
+    ("Rxhomeo Private Limited d.b.a. Rxhomeo, Inc", "co:rxhomeo", "Rxhomeo"),
+]
+
+
+@pytest.mark.parametrize("name,want_id,want_name", COMPANY_IDS)
+def test_company_normalization(name, want_id, want_name):
+    cid, clean, _stable = resolve_company(name)
+    assert cid == want_id
+    assert clean == want_name
+
+
+def test_stable_id_lookup_and_default():
+    ids = {"co:foo": "765980TFWHQUEX7C5293"}
+    assert stable_id_for("co:foo", ids) == "765980TFWHQUEX7C5293"
+    assert stable_id_for("co:missing", ids) == ""
+
+
+def test_resolve_company_populates_stable_id(monkeypatch):
+    monkeypatch.setattr(resolve, "_IDS", {"co:nucare-pharmaceuticals": "Q123456"})
+    assert resolve_company("NuCare Pharmaceuticals,Inc.")[2] == "Q123456"
+
+
+def test_load_ids_ignores_doc_and_nonstring(tmp_path):
+    p = tmp_path / "company_ids.json"
+    p.write_text('{"_README": "docs", "co:x": "Q1", "co:bad": 5}')
+    assert _load_ids(str(p)) == {"co:x": "Q1"}
+
+
+def test_seed_file_is_valid():
+    ids = _load_ids()  # the shipped data/company_ids.json
+    assert ids and all(k.startswith("co:") and isinstance(v, str) for k, v in ids.items())
 
 
 def test_resolve_ingredient_prefers_unii():

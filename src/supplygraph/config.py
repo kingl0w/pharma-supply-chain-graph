@@ -12,7 +12,8 @@ TRUST_WEIGHT = 0.95                  # authoritative regulatory submission
 VOCAB = "https://w3id.org/supplygraph/schema#"
 
 # --- paths ---
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# config.py lives at src/supplygraph/config.py; walk up to the repo root (3 levels).
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA = os.path.join(ROOT, "data")
 LANDING_DIR = os.path.join(DATA, "landing")   # raw, immutable (bronze)
 OUT_DIR = os.path.join(DATA, "out")           # neutral output (gold)
