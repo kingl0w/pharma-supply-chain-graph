@@ -1,4 +1,4 @@
-.PHONY: fetch build query rdf test clean
+.PHONY: fetch build query rdf neo4j test clean
 N ?= 3000
 
 # src/ layout, no install required: put the package on the path explicitly.
@@ -15,6 +15,9 @@ query:            ## run sample analytics on the built graph
 
 rdf:              ## load graph.jsonld into rdf, validate with shacl, run sparql
 	$(PY) -m supplygraph.cli rdf
+
+neo4j:            ## load nodes/edges csvs into neo4j, run cypher analytics (needs .[neo4j] + NEO4J_* env)
+	$(PY) -m supplygraph.cli neo4j
 
 test:             ## run unit tests
 	pytest -q

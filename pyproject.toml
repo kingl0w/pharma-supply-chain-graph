@@ -14,6 +14,7 @@ dependencies = []
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 rdf = ["rdflib>=7", "pyshacl>=0.26"]   # rdf consumer layer only; core stays stdlib
+neo4j = ["neo4j>=5"]                    # neo4j consumer layer only; core stays stdlib
 
 [project.scripts]
 supplygraph = "supplygraph.cli:main"
