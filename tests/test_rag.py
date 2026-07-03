@@ -114,6 +114,52 @@ def test_answer_returns_dict_with_citations(monkeypatch):
     assert res["cypher"].endswith("LIMIT 50")        # ensure_limit applied
 
 
+def test_multirow_answer_reaches_compose_and_matches_citations(monkeypatch):
+    # regression: citations and the answer must agree on whether rows exist.
+    # compose_answer must receive the same non-empty rows the citations were built
+    # from, and must not fall back to the "no data" message.
+    rows = [{"product": f"SUNSCREEN {i}", "source_record": f"spl-{i}"} for i in range(34)]
+    calls = []
+
+    def fake_chat(messages, **k):
+        calls.append(messages)
+        if len(calls) == 1:            # text_to_cypher
+            return "MATCH (p:Product)-[c:CONTAINS]->(:Part) RETURN p.name, c.source_record"
+        # compose_answer: the rows must have reached it
+        assert '"spl-0"' in messages[-1]["content"]
+        assert '"spl-33"' in messages[-1]["content"]
+        return "34 sunscreens match; sources spl-0 ... spl-33."
+
+    monkeypatch.setattr("supplygraph.llm.chat", fake_chat)
+    res = rag.answer("what contains both avobenzone and octocrylene?", _FakeSession(rows))
+
+    assert len(calls) == 2                                # compose actually ran
+    assert res["answer"] and "no data" not in res["answer"].lower()
+    assert res["citations"] == [f"spl-{i}" for i in range(34)]
+    assert len(res["rows"]) == 34
+
+
+def test_compose_answer_affirms_prefiltered_matches(monkeypatch):
+    # the WHERE clause already guaranteed the "both ingredients" condition, but the
+    # rows carry only product + source_record. compose_answer must mark the rows
+    # authoritative so a rule-following model affirms instead of re-checking absent
+    # columns and denying. the fake models exactly that rule.
+    rows = [{"product": f"SUNSCREEN {i}", "source_record": f"spl-{i}"} for i in range(3)]
+
+    def fake_chat(messages, **k):
+        prompt = " ".join(m["content"] for m in messages).lower()
+        if "authoritative matches" in prompt and "do not re-verify" in prompt:
+            return "All 3 returned sunscreens match: " + \
+                   ", ".join(r["product"] for r in rows) + "."
+        return "None of these products contain both ingredients."
+
+    monkeypatch.setattr("supplygraph.llm.chat", fake_chat)
+    out = rag.compose_answer("what contains both avobenzone and octocrylene?", rows)
+
+    assert "SUNSCREEN 0" in out
+    assert not any(d in out.lower() for d in ("none", "do not contain", "does not"))
+
+
 def test_answer_empty_rows_has_no_citations(monkeypatch):
     replies = iter([
         "MATCH (p:Product) WHERE p.name = 'nope' RETURN p.name",

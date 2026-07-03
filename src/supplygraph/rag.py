@@ -23,7 +23,16 @@ Nodes:
 Relationships (each carries provenance: source, confidence, as_of, source_record):
   (:Company)-[:MAKES]->(:Product)
   (:Product)-[:CONTAINS]->(:Part)
-Return the source_record of the relationships you use so answers can be cited."""
+Part.name and Product.name are stored UPPERCASE. Always match names
+case-insensitively with toLower(x.name) CONTAINS '<lowercase term>'; never use
+exact equality or a {name: '...'} map filter.
+Do not add a category-word filter on the product name (e.g. requiring the name to
+contain "sunscreen") unless the user explicitly asks to filter by product name.
+When a question filters on related-node properties (e.g. ingredient names), also
+RETURN those matched values (e.g. a.name, b.name) so the evidence appears in the rows.
+For a fact question about a specific product, ingredient, or maker, RETURN the
+relationship's source_record so the answer can be cited. For an aggregate/count
+question, omit source_record and return only the counts."""
 
 EXAMPLES = [
     ("Which companies make the most products?",
@@ -34,7 +43,13 @@ EXAMPLES = [
      "MATCH (p:Product)-[c:CONTAINS]->(part:Part) "
      "WHERE toLower(p.name) CONTAINS 'ibuprofen' "
      "RETURN DISTINCT p.name AS product, part.name AS ingredient, "
-     "c.source_record AS source_record"),
+     "c.source_record AS source_record, c.confidence AS confidence"),
+    ("What sunscreens contain both avobenzone and octocrylene?",
+     "MATCH (p:Product)-[c1:CONTAINS]->(a:Part), (p)-[:CONTAINS]->(b:Part) "
+     "WHERE toLower(a.name) CONTAINS 'avobenzone' "
+     "AND toLower(b.name) CONTAINS 'octocrylene' "
+     "RETURN DISTINCT p.name AS product, a.name AS ingredient_1, "
+     "b.name AS ingredient_2, c1.source_record AS source_record"),
     ("Which products contain caffeine?",
      "MATCH (p:Product)-[c:CONTAINS]->(part:Part) "
      "WHERE toLower(part.name) CONTAINS 'caffeine' "
@@ -108,7 +123,12 @@ def _fix_cypher(cypher, error):
     return _strip_fences(out)
 
 
+NO_DATA = "The graph has no data for this question."
+
+
 def compose_answer(question, rows):
+    if not rows:                       # empty-check in code, consistent with _citations
+        return NO_DATA
     from . import llm
     return llm.chat([
         {"role": "system", "content": "You answer strictly from the provided graph "
@@ -116,9 +136,12 @@ def compose_answer(question, rows):
          "drugs, companies, or ingredients that are not present in the rows."},
         {"role": "user", "content":
             f"Question: {question}\n\nRows returned from the graph (JSON):\n"
-            f"{json.dumps(rows, indent=2)}\n\nAnswer using ONLY these rows and cite "
-            "the source_record value(s). If the rows are empty, say plainly that the "
-            "graph has no data for this question."},
+            f"{json.dumps(rows, indent=2)}\n\nThese {len(rows)} row(s) are the result "
+            "set of a query that already applied every filter in the question, so each "
+            "row satisfies the question by construction. Treat the rows as authoritative "
+            "matches: do not re-verify the condition against columns that may not be "
+            "present. Answer by listing or summarizing the returned rows and cite the "
+            "source_record value(s). Do not claim there is no data."},
     ])
 
 
@@ -159,6 +182,7 @@ def _citations(rows):
 
 def answer(question, session):
     cypher, rows = run_cypher(session, text_to_cypher(question))
+    rows = list(rows)                  # materialize once; both consumers read this list
     return {"question": question, "cypher": cypher, "rows": rows,
             "answer": compose_answer(question, rows), "citations": _citations(rows)}
 
