@@ -1,4 +1,4 @@
-"""cli entrypoint: python -m supplygraph.cli {fetch,build,query}."""
+"""cli entrypoint: python -m supplygraph.cli {fetch,build,query,rdf,neo4j,ask,serve}."""
 import argparse
 
 from . import config, emit, openfda
@@ -20,6 +20,12 @@ def main():
     sub.add_parser("rdf", help="load graph.jsonld into rdf, validate (shacl), run sparql analytics")
     sub.add_parser("neo4j", help="load nodes/edges csvs into neo4j, run cypher analytics")
 
+    a = sub.add_parser("ask", help="graph-rag: plain-english question -> cypher -> cited answer")
+    a.add_argument("question", help="the question to answer from the graph")
+
+    s = sub.add_parser("serve", help="serve the graph-rag endpoint (POST /ask, GET /health)")
+    s.add_argument("--port", type=int, default=8000, help="port to listen on (default 8000)")
+
     args = ap.parse_args()
     if args.cmd == "fetch":
         openfda.fetch(total=args.total, trim=not args.no_trim)
@@ -34,6 +40,12 @@ def main():
     elif args.cmd == "neo4j":
         from . import neo4j_load
         raise SystemExit(0 if neo4j_load.run() else 1)
+    elif args.cmd == "ask":
+        from . import rag
+        rag.run(args.question)
+    elif args.cmd == "serve":
+        from . import rag
+        rag.serve(port=args.port)
 
 
 if __name__ == "__main__":

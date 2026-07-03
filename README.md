@@ -40,6 +40,12 @@ pip install -e ".[neo4j]"
 export NEO4J_URI=bolt://localhost:7687 NEO4J_USER=neo4j NEO4J_PASSWORD=your_pw
 make neo4j
 
+# graph-RAG: ask a plain-English question, get a grounded, cited answer
+pip install -e ".[rag]"                 # neo4j driver; the LLM client is stdlib urllib
+export LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=llama3.1   # any OpenAI-compatible LLM
+make ask Q="which companies make the most products?"
+make serve                              # or serve it: POST /ask, GET /health (PORT=8000)
+
 # tests (no network needed)
 pip install -e ".[dev]"
 make test
@@ -48,10 +54,25 @@ make test
 The core pipeline uses only the Python standard library. `pytest` is the only
 dev dependency. The RDF consumer (`make rdf`) adds `rdflib` + `pyshacl`, scoped to
 the optional `rdf` extra; the Neo4j consumer (`make neo4j`) adds the official
-`neo4j` driver in the optional `neo4j` extra. Each consumer is independent and the
-core install stays dependency-free. The two consumers read different artifacts of
-the same build — RDF reads `graph.jsonld`, Neo4j reads `nodes.csv` + `edges.csv` —
-and print the same analytics, proving the neutral output is store-portable.
+`neo4j` driver in the optional `neo4j` extra; the graph-RAG consumer (`make ask` /
+`make serve`) reuses the `neo4j` driver in the optional `rag` extra and needs a
+reachable OpenAI-compatible LLM — its LLM client is stdlib `urllib`, so no HTTP
+dependency is added. Each consumer is independent and the core install stays
+dependency-free. The consumers read different artifacts of the same build — RDF reads
+`graph.jsonld`, Neo4j and RAG read `nodes.csv` + `edges.csv` — proving the neutral
+output is store-portable.
+
+## Graph-RAG endpoint
+
+`make ask Q="..."` turns a plain-English question into a **read-only** Cypher query
+(few-shot prompted over the schema), runs it against Neo4j inside a read transaction,
+and has the LLM answer from the returned rows only — citing the `source_record` behind
+every fact and refusing to invent drugs, companies, or ingredients. Generated queries
+are double-guarded: a write-clause check rejects anything mutating before it runs, and
+`execute_read` makes the database itself refuse writes. `make serve` exposes the same
+pipeline as a stdlib endpoint (`POST /ask` with `{"question": "..."}`, `GET /health`)
+for a future web demo. LLM connection comes from `LLM_BASE_URL` / `LLM_MODEL` /
+`LLM_API_KEY`; nothing is hardcoded.
 
 ## Output
 
@@ -63,7 +84,7 @@ and print the same analytics, proving the neutral output is store-portable.
 ## Structure
 
 ```
-src/supplygraph/  pipeline package (connector, parse, resolve, emit, query, cli, rdf, neo4j_load)
+src/supplygraph/  pipeline package (connector, parse, resolve, emit, query, cli, rdf, neo4j_load, rag, llm)
 shapes/           SHACL shapes for the RDF consumer
 cypher/           commented Cypher practice queries for the Neo4j consumer
 docs/             SCHEMA.md (ontology) and DATA_SOURCING.md (sourcing architecture)
@@ -80,8 +101,9 @@ neutral output, CLI, tests. Consumer 1 (RDF) is in: `make rdf` loads the JSON-LD
 rdflib, validates it against the `shapes/` SHACL contract, and runs SPARQL analytics
 locally (no server). Consumer 2 (Neo4j) is in: `make neo4j` loads `nodes.csv` +
 `edges.csv` into Neo4j via the official driver and runs the same analytics in Cypher
-(the portability proof). Next: a RAG endpoint that answers questions and cites the
-source record behind every fact.
+(the portability proof). Consumer 3 (graph-RAG) is in: `make ask` answers a plain-English
+question by generating read-only Cypher, running it, and citing the `source_record`
+behind every fact; `make serve` exposes it as an HTTP endpoint for the web demo.
 
 ## Data source and license
 
