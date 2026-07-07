@@ -1,3 +1,0 @@
-# vercel deploy only (api/ask.py). the core pipeline stays stdlib-only;
-# local installs use the extras in pyproject.toml instead.
-neo4j>=5

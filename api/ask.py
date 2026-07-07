@@ -3,6 +3,10 @@
 vercel's python runtime invokes a BaseHTTPRequestHandler subclass named
 `handler`; the whole repo is bundled, so we import supplygraph from src/.
 env in the vercel dashboard: NEO4J_URI/USER/PASSWORD + LLM_BASE_URL/MODEL/API_KEY.
+
+module level is stdlib-only on purpose: the supplygraph import (and through it
+the neo4j driver) happens inside do_POST, so serving the static page and the
+health check can never crash on a missing dependency or unreachable db.
 """
 import json
 import os
@@ -10,8 +14,6 @@ import sys
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from supplygraph import rag  # noqa: E402
 
 MAX_QUESTION = 300
 
@@ -61,6 +63,7 @@ class handler(BaseHTTPRequestHandler):
             return
         # ponytail: fresh driver per invocation; pool if traffic ever matters
         try:
+            from supplygraph import rag  # deferred: see module docstring
             with rag._driver() as driver, driver.session() as session:
                 res = rag.answer(question, session)
         except (Exception, SystemExit) as e:  # llm.py raises SystemExit when unreachable

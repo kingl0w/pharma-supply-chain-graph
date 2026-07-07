@@ -8,8 +8,11 @@ version = "0.1.0"
 description = "openFDA drug labels -> provenanced, store-neutral knowledge graph"
 readme = "README.md"
 requires-python = ">=3.10"
-# The core pipeline (fetch, parse, resolve, emit, query) is standard-library only.
-dependencies = []
+# The core pipeline (fetch, parse, resolve, emit, query) is standard-library only
+# and never imports this at module level. neo4j is listed here because Vercel's
+# python builder installs [project.dependencies] (it reads pyproject.toml, not
+# requirements.txt) and the /api/ask function needs the driver at request time.
+dependencies = ["neo4j>=5"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
