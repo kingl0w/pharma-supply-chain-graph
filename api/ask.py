@@ -15,19 +15,41 @@ from supplygraph import rag  # noqa: E402
 
 MAX_QUESTION = 300
 
+# vercel's entrypoint model sends every path to this app; public/** normally
+# serves from the CDN first, but the root path lands here, so serve the page
+# ourselves for the fixed whitelist below. no dynamic paths: no traversal risk.
+PUBLIC = os.path.join(os.path.dirname(__file__), "..", "public")
+STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
+          "/index.html": ("index.html", "text/html; charset=utf-8"),
+          "/graph-data.json": ("graph-data.json", "application/json")}
+
 
 class handler(BaseHTTPRequestHandler):
     def _send(self, code, obj):
-        body = json.dumps(obj).encode()
+        self._send_raw(code, json.dumps(obj).encode(), "application/json")
+
+    def _send_raw(self, code, body, ctype):
         self.send_response(code)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", ctype)
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self):
-        self._send(200, {"status": "ok"})
+        path = self.path.split("?")[0]
+        if path in STATIC:
+            fname, ctype = STATIC[path]
+            with open(os.path.join(PUBLIC, fname), "rb") as f:
+                self._send_raw(200, f.read(), ctype)
+            return
+        if path.rstrip("/") == "/api/ask":
+            self._send(200, {"status": "ok"})
+            return
+        self._send(404, {"error": "not found"})
 
     def do_POST(self):
+        if self.path.split("?")[0].rstrip("/") != "/api/ask":
+            self._send(404, {"error": "not found"})
+            return
         length = int(self.headers.get("Content-Length", 0))
         try:
             question = json.loads(self.rfile.read(length) or b"{}")["question"].strip()
