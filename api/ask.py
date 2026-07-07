@@ -11,6 +11,7 @@ health check can never crash on a missing dependency or unreachable db.
 import json
 import os
 import sys
+import traceback
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -40,8 +41,23 @@ class handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path in STATIC:
             fname, ctype = STATIC[path]
-            with open(os.path.join(PUBLIC, fname), "rb") as f:
-                self._send_raw(200, f.read(), ctype)
+            # public/ is on the CDN but not always in the function bundle, and an
+            # uncaught OSError here is a FUNCTION_INVOCATION_FAILED: try the
+            # __file__-relative path, then project-cwd (vercel's stated cwd), then
+            # redirect to the CDN copy (the documented app-route-to-static pattern).
+            for base in (PUBLIC, "public"):
+                try:
+                    with open(os.path.join(base, fname), "rb") as f:
+                        self._send_raw(200, f.read(), ctype)
+                    return
+                except OSError:
+                    continue
+            if path != "/" + fname:               # loop guard: /index.html never redirects to itself
+                self.send_response(307)
+                self.send_header("Location", "/" + fname)
+                self.end_headers()
+                return
+            self._send(500, {"error": f"static file {fname} missing from function bundle"})
             return
         if path.rstrip("/") == "/api/ask":
             self._send(200, {"status": "ok"})
@@ -67,6 +83,7 @@ class handler(BaseHTTPRequestHandler):
             with rag._driver() as driver, driver.session() as session:
                 res = rag.answer(question, session)
         except (Exception, SystemExit) as e:  # llm.py raises SystemExit when unreachable
+            traceback.print_exc()             # full trace to vercel's function logs
             self._send(500, {"error": str(e)})
             return
         self._send(200, {k: res[k] for k in ("answer", "cypher", "citations", "rows")})
