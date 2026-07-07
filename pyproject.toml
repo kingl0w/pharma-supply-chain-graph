@@ -23,6 +23,11 @@ supplygraph = "supplygraph.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.vercel]
+# vercel's python builder needs the entrypoint spelled out (api/ask.py is not a
+# default location). `handler` is the BaseHTTPRequestHandler subclass in api/ask.py.
+entrypoint = "api.ask:handler"
+
 [tool.pytest.ini_options]
 # Disable the broken global web3 'pytest_ethereum' plugin; put src/ on the path
 # so tests import the package without an install.
