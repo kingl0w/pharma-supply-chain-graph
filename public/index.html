@@ -28,12 +28,12 @@ a:hover{text-decoration-color:var(--ink)}
 
 /* masthead */
 header{border-bottom:1px solid var(--hair)}
-.mast{display:flex;justify-content:space-between;align-items:baseline;padding:18px 0;gap:16px;flex-wrap:wrap}
+.mast{display:flex;justify-content:space-between;align-items:baseline;padding-top:18px;padding-bottom:18px;gap:16px;flex-wrap:wrap}
 .mast .name{font-family:var(--serif);font-weight:550;font-size:20px;letter-spacing:.01em}
 .mast nav{display:flex;gap:22px;font-size:14px;color:var(--ink-2)}
 
 /* hero */
-.hero{padding:clamp(56px,9vw,110px) 0 clamp(40px,6vw,72px)}
+.hero{padding-top:clamp(56px,9vw,110px);padding-bottom:clamp(40px,6vw,72px)}
 .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:22px}
 h1{font-family:var(--serif);font-weight:400;font-size:clamp(38px,6.2vw,68px);line-height:1.08;letter-spacing:-.015em;max-width:15ch}
 h1 em{font-style:italic;font-weight:300}
@@ -60,6 +60,10 @@ h2{font-family:var(--serif);font-weight:550;font-size:clamp(26px,3.4vw,36px);let
 .legend .sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:1px}
 .legend b{font-variant-numeric:tabular-nums;font-weight:600}
 .hint{position:absolute;bottom:12px;left:14px;font-size:12.5px;color:var(--ink-3)}
+@media(max-width:640px){
+  .legend{left:10px;right:10px;top:10px;display:flex;justify-content:space-between;gap:8px;padding:7px 10px;font-size:11.5px;line-height:1.5}
+  #graph{height:min(62vh,540px)}
+}
 #tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--paper);font-size:13px;padding:5px 10px;border-radius:2px;display:none;max-width:280px;line-height:1.4;z-index:3}
 #tip .t{color:#b9b3a6;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em}
 #nodecard{position:absolute;top:14px;right:14px;width:min(300px,74%);max-height:calc(100% - 28px);overflow-y:auto;background:rgba(250,247,242,.96);border:1px solid var(--hair);border-radius:3px;padding:14px 16px;font-size:14px;display:none;z-index:2}
@@ -124,7 +128,7 @@ h2{font-family:var(--serif);font-weight:550;font-size:clamp(26px,3.4vw,36px);let
 
 /* footer */
 footer{background:var(--ink);color:#8b857a;font-size:13.5px;margin-top:clamp(72px,10vw,128px)}
-footer .inner{border-top:1px solid #383530;padding:26px 0 40px;display:flex;justify-content:space-between;gap:12px 32px;flex-wrap:wrap}
+footer .inner{border-top:1px solid #383530;padding-top:26px;padding-bottom:40px;display:flex;justify-content:space-between;gap:12px 32px;flex-wrap:wrap}
 footer a{color:#b9b3a6}
 </style>
 </head>
@@ -176,7 +180,7 @@ footer a{color:#b9b3a6}
   <div class="graphbox">
     <canvas id="graph"></canvas>
     <div class="legend" id="legend"></div>
-    <div class="hint">drag to pan · scroll to zoom · click a node</div>
+    <div class="hint">drag to pan · scroll or pinch to zoom · tap a node</div>
     <div id="tip"></div>
     <div id="nodecard"></div>
   </div>
@@ -478,12 +482,31 @@ barlist(document.getElementById("ingredients"), INGREDIENTS, DEEP.Part);
     }
     return best;
   }
-  let drag = null, moved = false;
+  let drag = null, moved = false, pinch = null;
+  const pointers = new Map();                  // two-finger pinch zoom on touch
   canvas.addEventListener("pointerdown", e=>{
-    drag = {x:e.offsetX, y:e.offsetY}; moved = false;
-    canvas.setPointerCapture(e.pointerId); canvas.style.cursor = "grabbing";
+    pointers.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
+    canvas.setPointerCapture(e.pointerId);
+    if(pointers.size === 2){
+      const [a,b] = [...pointers.values()];
+      pinch = {d: Math.hypot(a.x-b.x, a.y-b.y) || 1, mx:(a.x+b.x)/2, my:(a.y+b.y)/2};
+      drag = null; moved = true;
+    } else if(pointers.size === 1){
+      drag = {x:e.offsetX, y:e.offsetY}; moved = false;
+      canvas.style.cursor = "grabbing";
+    }
   });
   canvas.addEventListener("pointermove", e=>{
+    if(pointers.has(e.pointerId)) pointers.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
+    if(pinch && pointers.size === 2){
+      const [a,b] = [...pointers.values()];
+      const d = Math.hypot(a.x-b.x, a.y-b.y) || 1, mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+      const k = Math.min(8, Math.max(0.3, view.k * d/pinch.d));
+      view.x = mx - (pinch.mx - view.x)*(k/view.k);
+      view.y = my - (pinch.my - view.y)*(k/view.k);
+      view.k = k; pinch = {d, mx, my};
+      tip.style.display = "none"; draw(); return;
+    }
     if(drag){
       const dx = e.offsetX-drag.x, dy = e.offsetY-drag.y;
       if(Math.abs(dx)+Math.abs(dy) > 3) moved = true;
@@ -501,12 +524,21 @@ barlist(document.getElementById("ingredients"), INGREDIENTS, DEEP.Part);
       tip.lastElementChild.textContent = titleCase(n.name);
     } else tip.style.display = "none";
   });
-  canvas.addEventListener("pointerup", e=>{
+  const endPointer = e=>{
+    pointers.delete(e.pointerId);
+    if(pointers.size < 2) pinch = null;
+    if(pointers.size === 1){                   // pinch -> one finger left: resume panning
+      const [p] = pointers.values();
+      drag = {x:p.x, y:p.y}; moved = true;
+      return;
+    }
     const n = pick(e.offsetX, e.offsetY);
     canvas.style.cursor = n ? "pointer" : "grab";
     if(drag && !moved) selectNode(n);
     drag = null;
-  });
+  };
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
   canvas.addEventListener("pointerleave", ()=>{ hovered=null; tip.style.display="none";
     canvas.style.cursor = "grab"; draw(); });
   canvas.addEventListener("wheel", e=>{

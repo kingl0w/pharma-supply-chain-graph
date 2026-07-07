@@ -21,8 +21,11 @@ def chat(messages, temperature=0, model=None):
     model = model or os.environ.get("LLM_MODEL", DEFAULT_MODEL)
     body = json.dumps({"model": model, "messages": messages,
                        "temperature": temperature}).encode()
+    # a real User-Agent matters: Cloudflare (fronting groq and others) 403s
+    # urllib's default "Python-urllib/3.x" before the request reaches auth.
     req = urllib.request.Request(f"{base}/chat/completions", data=body,
-                                 headers={"Content-Type": "application/json"})
+                                 headers={"Content-Type": "application/json",
+                                          "User-Agent": "supplygraph/0.1"})
     key = os.environ.get("LLM_API_KEY")
     if key:
         req.add_header("Authorization", f"Bearer {key}")
