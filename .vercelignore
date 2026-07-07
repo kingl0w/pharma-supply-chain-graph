@@ -1,0 +1,9 @@
+data/
+tests/
+docs/
+cypher/
+shapes/
+.venv/
+.claude/
+*.egg-info/
+.pytest_cache/

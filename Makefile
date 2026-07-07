@@ -1,4 +1,4 @@
-.PHONY: fetch build query rdf neo4j ask serve test clean
+.PHONY: fetch build query rdf neo4j ask serve demo-data test clean
 N ?= 3000
 PORT ?= 8000
 
@@ -25,6 +25,9 @@ ask:              ## graph-rag: make ask Q="which companies make the most produc
 
 serve:            ## serve the graph-rag endpoint on PORT (default 8000): POST /ask, GET /health
 	$(PY) -m supplygraph.cli serve --port $(PORT)
+
+demo-data:        ## snapshot data/out into public/graph-data.json for the demo page
+	python scripts/demo_data.py
 
 test:             ## run unit tests
 	pytest -q
