@@ -56,17 +56,22 @@ h2{font-family:var(--serif);font-weight:550;font-size:clamp(26px,3.4vw,36px);let
 /* graph */
 .graphbox{position:relative;border:1px solid var(--hair);background:#fcfaf6;border-radius:3px;overflow:hidden}
 #graph{display:block;width:100%;height:min(84vh,780px);cursor:grab;touch-action:none}
-#graph.dragging{cursor:grabbing}
 .legend{position:absolute;top:14px;left:14px;background:rgba(250,247,242,.92);border:1px solid var(--hair);border-radius:3px;padding:10px 14px;font-size:13.5px;line-height:2}
 .legend .sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:1px}
 .legend b{font-variant-numeric:tabular-nums;font-weight:600}
 .hint{position:absolute;bottom:12px;left:14px;font-size:12.5px;color:var(--ink-3)}
 #tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--paper);font-size:13px;padding:5px 10px;border-radius:2px;display:none;max-width:280px;line-height:1.4;z-index:3}
 #tip .t{color:#b9b3a6;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em}
-#nodecard{position:absolute;top:14px;right:14px;width:min(280px,70%);background:rgba(250,247,242,.96);border:1px solid var(--hair);border-radius:3px;padding:14px 16px;font-size:14px;display:none;z-index:2}
+#nodecard{position:absolute;top:14px;right:14px;width:min(300px,74%);max-height:calc(100% - 28px);overflow-y:auto;background:rgba(250,247,242,.96);border:1px solid var(--hair);border-radius:3px;padding:14px 16px;font-size:14px;display:none;z-index:2}
 #nodecard .t{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
 #nodecard .n{font-family:var(--serif);font-size:18px;font-weight:550;margin:2px 0 6px;line-height:1.25}
 #nodecard .d{color:var(--ink-2);font-size:13.5px}
+#nodecard .mono{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);overflow-wrap:anywhere}
+#nodecard .receipts{margin-top:10px;border-top:1px solid var(--hair)}
+#nodecard .erow{padding:8px 0;border-bottom:1px dashed var(--hair);font-size:12.5px;line-height:1.5}
+#nodecard .ehead b{font-weight:600}
+#nodecard .emeta{color:var(--ink-2);font-size:12px}
+#nodecard .esr{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);overflow-wrap:anywhere}
 #nodecard button{margin-top:10px;border:1px solid var(--rule);background:none;font:13px var(--sans);padding:4px 10px;border-radius:2px;cursor:pointer;color:var(--ink-2)}
 #nodecard button:hover{border-color:var(--ink);color:var(--ink)}
 
@@ -285,10 +290,10 @@ barlist(document.getElementById("ingredients"), INGREDIENTS, DEEP.Part);
   const deg = new Float32Array(N);
   for(const [s,t] of data.edges){ deg[s]++; deg[t]++; }
   const counts = {Company:0, Product:0, Part:0};
-  const nodes = data.nodes.map(([id,label,name],i)=>{
+  const nodes = data.nodes.map(([id,label,name,stable],i)=>{
     counts[label]++;
     const a = i*2.399963, r = 10*Math.sqrt(0.5+i);       // phyllotaxis start (d3's default)
-    return {id,label,name,deg:deg[i],x:r*Math.cos(a),y:r*Math.sin(a),vx:0,vy:0,
+    return {id,label,name,stable,deg:deg[i],x:r*Math.cos(a),y:r*Math.sin(a),vx:0,vy:0,
             r:2+Math.sqrt(deg[i])*1.6};
   });
   const edges = data.edges;
@@ -382,20 +387,28 @@ barlist(document.getElementById("ingredients"), INGREDIENTS, DEEP.Part);
     view.y = H/2 - (miny+maxy)/2*view.k;
   }
   const neighbors = new Set();
+  const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const fmtDate = d => d && d.length===8 ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}` : d;
   function selectNode(n){
     selected = n; neighbors.clear();
     const card = document.getElementById("nodecard");
     if(!n){ card.style.display="none"; draw(); return; }
-    for(const [s,t] of edges){
-      if(nodes[s]===n) neighbors.add(nodes[t]);
-      if(nodes[t]===n) neighbors.add(nodes[s]);
+    const rows = [];
+    for(const [s,t,rel,conf,asof,sr] of edges){
+      if(nodes[s]===n){ neighbors.add(nodes[t]); rows.push({rel,out:true, other:nodes[t], conf, asof, sr}); }
+      else if(nodes[t]===n){ neighbors.add(nodes[s]); rows.push({rel,out:false, other:nodes[s], conf, asof, sr}); }
     }
     card.style.display = "block";
-    card.innerHTML = `<p class="t" style="color:${DEEP[n.label]}">${n.label}</p>
-      <p class="n"></p><p class="d">${n.deg} connection${n.deg===1?"":"s"} · <span style="font-family:var(--mono);font-size:12px"></span></p>
+    card.innerHTML = `<p class="t" style="color:${DEEP[n.label]}">${esc(n.label)}</p>
+      <p class="n">${esc(titleCase(n.name))}</p>
+      <p class="d mono">${esc(n.id)}${n.stable ? " · " + esc(n.stable) : ""}</p>
+      <div class="receipts">${rows.map(r=>`
+        <div class="erow">
+          <div class="ehead">${r.out ? `—${esc(r.rel)}→` : `←${esc(r.rel)}—`} ${esc(titleCase(r.other.name))}</div>
+          <div class="emeta">confidence ${esc(r.conf)} · as of ${esc(fmtDate(r.asof))}</div>
+          <div class="esr">${esc(r.sr)}</div>
+        </div>`).join("")}</div>
       <button>clear selection</button>`;
-    card.querySelector(".n").textContent = titleCase(n.name);
-    card.querySelector(".d span").textContent = n.id;
     card.querySelector("button").onclick = ()=>selectNode(null);
     draw();
   }
@@ -468,7 +481,7 @@ barlist(document.getElementById("ingredients"), INGREDIENTS, DEEP.Part);
   let drag = null, moved = false;
   canvas.addEventListener("pointerdown", e=>{
     drag = {x:e.offsetX, y:e.offsetY}; moved = false;
-    canvas.setPointerCapture(e.pointerId); canvas.classList.add("dragging");
+    canvas.setPointerCapture(e.pointerId); canvas.style.cursor = "grabbing";
   });
   canvas.addEventListener("pointermove", e=>{
     if(drag){
@@ -478,6 +491,7 @@ barlist(document.getElementById("ingredients"), INGREDIENTS, DEEP.Part);
       tip.style.display = "none"; draw(); return;
     }
     const n = pick(e.offsetX, e.offsetY);
+    canvas.style.cursor = n ? "pointer" : "grab";
     if(n !== hovered){ hovered = n; draw(); }
     if(n){
       tip.style.display = "block";
@@ -488,11 +502,13 @@ barlist(document.getElementById("ingredients"), INGREDIENTS, DEEP.Part);
     } else tip.style.display = "none";
   });
   canvas.addEventListener("pointerup", e=>{
-    canvas.classList.remove("dragging");
-    if(drag && !moved) selectNode(pick(e.offsetX, e.offsetY));
+    const n = pick(e.offsetX, e.offsetY);
+    canvas.style.cursor = n ? "pointer" : "grab";
+    if(drag && !moved) selectNode(n);
     drag = null;
   });
-  canvas.addEventListener("pointerleave", ()=>{ hovered=null; tip.style.display="none"; draw(); });
+  canvas.addEventListener("pointerleave", ()=>{ hovered=null; tip.style.display="none";
+    canvas.style.cursor = "grab"; draw(); });
   canvas.addEventListener("wheel", e=>{
     e.preventDefault();
     const k = Math.min(8, Math.max(0.3, view.k * (e.deltaY<0 ? 1.15 : 0.87)));
