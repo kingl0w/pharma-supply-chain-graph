@@ -8,15 +8,15 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='8' cy='22' r='5' fill='%232a78d6'/><circle cx='22' cy='8' r='5' fill='%231baf7a'/><circle cx='24' cy='24' r='4' fill='%23eda100'/><path d='M11 19 L19 11 M13 23 L20 24' stroke='%23171512' stroke-width='1.5'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,550;9..144,640&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300..700;1,300..700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
   --paper:#faf7f2; --panel:#f3efe7; --ink:#171512; --ink-2:#55514a; --ink-3:#8b857a;
   --hair:#e2dccf; --rule:#c9c2b2;
   --co:#2a78d6; --pr:#1baf7a; --pt:#eda100;
   --co-deep:#1c5cab; --pr-deep:#0e7d56; --pt-deep:#a86f00;
-  --serif:"Fraunces",Georgia,serif; --sans:"Instrument Sans",system-ui,sans-serif;
-  --mono:"Spline Sans Mono",ui-monospace,monospace;
+  --serif:"Roboto",system-ui,sans-serif; --sans:"Roboto",system-ui,sans-serif;
+  --mono:"Roboto Mono",ui-monospace,monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -133,8 +133,8 @@ footer a{color:#b9b3a6}
   <span class="name">SupplyGraph</span>
   <nav>
     <a href="#graph-sec">Graph</a>
-    <a href="#prov-sec">Provenance</a>
     <a href="#ask-sec">Ask it</a>
+    <a href="#prov-sec">Provenance</a>
     <a href="https://github.com/kingl0w/pharma-supply-chain-graph">Source ↗</a>
   </nav>
 </div></header>
@@ -144,8 +144,8 @@ footer a{color:#b9b3a6}
   <h1>Every fact in this graph can show <em>its receipt.</em></h1>
   <p class="lede">3,000 raw drug-label records from the openFDA API, parsed and entity-resolved
   into a store-neutral graph — companies, the products they make, the active ingredients those
-  products contain. One pipeline feeds an RDF triple store, Neo4j, and the live
-  question-answering endpoint at the bottom of this page. No edge exists without a source,
+  products contain. One pipeline feeds an RDF triple store, Neo4j, and a live
+  question-answering box right under the graph. No edge exists without a source,
   a confidence score, a date, and the id of the record that asserted it.</p>
   <div class="pipeline" aria-label="pipeline diagram">
     <span class="step">openFDA API</span><span class="arrow">→</span>
@@ -179,8 +179,31 @@ footer a{color:#b9b3a6}
   </div>
 </div></section>
 
+<section class="ask" id="ask-sec"><div class="wrap inner">
+  <div class="sec-head"><span class="sec-num">02</span><h2>Ask the graph</h2></div>
+  <p class="sec-sub">Your question is translated to a read-only Cypher query, run against the
+  live Neo4j copy of this graph, and answered from the returned rows only — with the
+  source-record ids cited. If nothing comes back, it says so instead of guessing.</p>
+  <div class="askrow">
+    <input id="q" maxlength="300" placeholder="e.g. What sunscreens contain both avobenzone and octocrylene?"
+      aria-label="question for the graph">
+    <button id="go">Ask</button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div id="out">
+    <p class="status" id="status"></p>
+    <div id="answer"></div>
+    <div class="evidence" id="evidence">
+      <p class="cap">Cypher that ran</p>
+      <pre id="cypher"></pre>
+      <p class="cap" style="margin-top:16px">Citations — openFDA source records</p>
+      <div class="cites" id="cites"></div>
+    </div>
+  </div>
+</div></section>
+
 <section id="prov-sec"><div class="wrap">
-  <div class="sec-head"><span class="sec-num">02</span><h2>The provenance contract</h2></div>
+  <div class="sec-head"><span class="sec-num">03</span><h2>The provenance contract</h2></div>
   <div class="prov">
     <div class="prov-text">
       <p>Every relationship carries four fields: the <b>source</b> that asserted it, a
@@ -203,7 +226,7 @@ footer a{color:#b9b3a6}
 </div></section>
 
 <section><div class="wrap">
-  <div class="sec-head"><span class="sec-num">03</span><h2>What the graph knows</h2></div>
+  <div class="sec-head"><span class="sec-num">04</span><h2>What the graph knows</h2></div>
   <p class="sec-sub">Sample analytics computed from the neutral output — the same numbers the
   SPARQL and Cypher consumers reproduce, three-way parity checked.</p>
   <div class="bars">
@@ -218,28 +241,6 @@ footer a{color:#b9b3a6}
   </div>
 </div></section>
 
-<section class="ask" id="ask-sec"><div class="wrap inner">
-  <div class="sec-head"><span class="sec-num">04</span><h2>Ask the graph</h2></div>
-  <p class="sec-sub">Your question is translated to a read-only Cypher query, run against the
-  live Neo4j copy of this graph, and answered from the returned rows only — with the
-  source-record ids cited. If nothing comes back, it says so instead of guessing.</p>
-  <div class="askrow">
-    <input id="q" maxlength="300" placeholder="e.g. What sunscreens contain both avobenzone and octocrylene?"
-      aria-label="question for the graph">
-    <button id="go">Ask</button>
-  </div>
-  <div class="chips" id="chips"></div>
-  <div id="out">
-    <p class="status" id="status"></p>
-    <div id="answer"></div>
-    <div class="evidence" id="evidence">
-      <p class="cap">Cypher that ran</p>
-      <pre id="cypher"></pre>
-      <p class="cap" style="margin-top:16px">Citations — openFDA source records</p>
-      <div class="cites" id="cites"></div>
-    </div>
-  </div>
-</div></section>
 
 <footer><div class="wrap inner">
   <span>Python stdlib pipeline · rdflib + SHACL · Neo4j · stdlib-urllib LLM client.
