@@ -62,6 +62,20 @@ class handler(BaseHTTPRequestHandler):
         if path.rstrip("/") == "/api/ask":
             self._send(200, {"status": "ok"})
             return
+        if path.rstrip("/") == "/api/warm":
+            # aura free pauses after 3 idle days and only the console can resume it,
+            # so no request can wake a paused db — this keeps it from idling at all.
+            # pinged daily by .github/workflows/keep-warm.yml.
+            try:
+                from supplygraph import rag  # deferred: see module docstring
+                with rag._driver() as driver, driver.session() as session:
+                    session.run("RETURN 1").consume()
+            except Exception as e:
+                traceback.print_exc()
+                self._send(500, {"error": str(e)})
+                return
+            self._send(200, {"status": "warm"})
+            return
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
